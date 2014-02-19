@@ -11,6 +11,10 @@
  * @see hook_drush_engine_type_info().
  */
 function drush_get_engine_types_info() {
+  if ($info = drush_get_context('DRUSH_ENGINE_TYPES_INFO')) {
+    return $info;
+  }
+
   $info = drush_command_invoke_all('drush_engine_type_info');
   foreach ($info as $type => $data) {
     $info[$type] += array(
@@ -24,7 +28,7 @@ function drush_get_engine_types_info() {
     );
   }
 
-  return $info;
+  return drush_set_context('DRUSH_ENGINE_TYPES_INFO', $info);
 }
 
 /**
