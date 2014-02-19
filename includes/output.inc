@@ -143,28 +143,12 @@ function drush_format($input, $metadata = NULL, $format = NULL) {
  * @see t()
  */
 function dt($string, $args = array()) {
-  $output = NULL;
-  if (function_exists('t') && drush_drupal_major_version() == 7) {
-    $output = t($string, $args);
+  if (!empty($args)) {
+    return strtr($string, $args);
   }
-  // The language system requires a working container which is built in DRUPAL_BOOTSTRAP_KERNEL phase.
-  else if (drush_drupal_major_version() >= 8 && function_exists('drupal_get_bootstrap_phase') && drupal_get_bootstrap_phase() >= DRUPAL_BOOTSTRAP_KERNEL) {
-    $output = t($string, $args);
+  else {
+    return $string;
   }
-  else if (function_exists('t') && drush_drupal_major_version() <= 7 && function_exists('theme')) {
-    $output = t($string, $args);
-  }
-
-  // If Drupal's t() function unavailable.
-  if (is_null($output)) {
-    if (!empty($args)) {
-      $output = strtr($string, $args);
-    }
-    else {
-      $output = $string;
-    }
-  }
-  return $output;
 }
 
 /**
