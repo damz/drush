@@ -219,7 +219,7 @@ function drush_pm_download() {
       }
 
       // Inform the user about available modules a/o themes in the downloaded project.
-      drush_pm_extensions_in_project($request);
+      // drush_pm_extensions_in_project($request);
     }
     else {
       // We don't `return` here in order to proceed with downloading additional projects.
