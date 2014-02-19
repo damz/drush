@@ -970,7 +970,11 @@ function drush_process_bootstrap_to_first_arg(&$arguments) {
  *
  */
 function drush_get_commands() {
-  $commands = $available_commands = array();
+  if ($commands = drush_get_context('DRUSH_COMMANDS')) {
+    return $commands;
+  }
+
+  $commands = array();
   $list = drush_commandfile_list();
   foreach ($list as $commandfile => $path) {
     if (drush_command_hook($commandfile, 'drush_command')) {
