@@ -1282,14 +1282,18 @@ function drush_command_invoke_all_ref($hook, &$reference_parameter) {
  *   An array with the names of the command files which are implementing this hook.
  */
 function drush_command_implements($hook) {
-  $implementations[$hook] = array();
+  if ($implementations = drush_get_context('DRUSH_COMMAND_IMPLEMENTS:' . $hook)) {
+    return $implementations;
+  }
+
+  $implementations = array();
   $list = drush_commandfile_list();
   foreach ($list as $commandfile => $file) {
     if (drush_command_hook($commandfile, $hook)) {
-      $implementations[$hook][] = $commandfile;
+      $implementations[] = $commandfile;
     }
   }
-  return (array)$implementations[$hook];
+  return drush_set_context('DRUSH_COMMAND_IMPLEMENTS:' . $hook, $implementations);
 }
 
 /**
