@@ -35,6 +35,7 @@ function make_download_pm($name, $type, $download, $download_location) {
     // be 'profile-only' so we don't end up with extra copies of core.
     'variant' => $type == 'core' ? 'full' : 'profile-only',
     'cache' => TRUE,
+    'strict' => 0,
   );
   if ($type == 'core') {
     $options['drupal-project-rename'] = basename($download_location);
@@ -43,18 +44,23 @@ function make_download_pm($name, $type, $download, $download_location) {
     unset($options['cache']);
   }
 
-  $backend_options = array();
-  if (!drush_get_option(array('verbose', 'debug'), FALSE)) {
-    $backend_options['integrate'] = TRUE;
-    $backend_options['log'] = FALSE;
+  $old_options = array();
+  foreach ($options as $key => $value) {
+    $old_options[$key] = drush_get_option($key);
+    drush_set_option($key, $value);
   }
 
   // Perform actual download with `drush pm-download`.
-  $return = drush_invoke_process('@none', 'pm-download', array($full_project_version), $options, $backend_options);
+  $return = drush_invoke('pm-download', array($full_project_version));
   if (empty($return['error_log'])) {
     // @todo Report the URL we used for download. See
     // http://drupal.org/node/1452672.
     drush_log(dt('@project downloaded.', array('@project' => $full_project_version)), 'ok');
+  }
+
+  // Restore old options.
+  foreach ($old_options as $key => $value) {
+    drush_set_option($key, $value);
   }
 }
 
