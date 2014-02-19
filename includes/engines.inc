@@ -58,6 +58,10 @@ function drush_get_engine_types_info() {
  *   A structured array of engines.
  */
 function drush_get_engines($engine_type) {
+  if ($engines = drush_get_context('DRUSH_ENGINES:' . $engine_type)) {
+    return $engines;
+  }
+
   $info = drush_get_engine_types_info();
   if (!isset($info[$engine_type])) {
     return drush_set_error('DRUSH_UNKNOWN_ENGINE_TYPE', dt('Unknown engine type !engine_type', array('!engine_type' => $engine_type)));
@@ -85,7 +89,7 @@ function drush_get_engines($engine_type) {
       }
     }
   }
-  return $engines;
+  return drush_set_context('DRUSH_ENGINES:' . $engine_type, $engines);
 }
 
 /**
