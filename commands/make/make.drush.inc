@@ -417,58 +417,62 @@ function make_projects($recursion, $contrib_destination, $info, $build_path, $ma
 
   // Process all projects concurrently using make-process.
   if (isset($projects['contrib'])) {
-    $concurrency = drush_get_option('concurrency', 1);
-    // Generate $concurrency sub-processes to do the actual work.
-    $invocations = array();
-    $thread = 0;
-    foreach ($projects['contrib'] as $project) {
-      $thread = ++$thread % $concurrency;
-      // Ensure that we've set this sub-process up.
-      if (!isset($invocations[$thread])) {
-        $invocations[$thread] = array(
-          'args' => array(
-            make_tmp(),
-          ),
-          'options' => array(
-            'projects' => array(),
-          ),
-          'site' => array(),
-        );
-      }
-      // Add the project to this sub-process.
-      $invocations[$thread]['options']['projects'][] = $project;
-      // Add the manifest so recursive downloads do not override projects.
-      $invocations[$thread]['options']['manifest'] = array_keys($projects['contrib']);
-    }
-    if (!empty($invocations)) {
-      // Backend options.
-      $backend_options = array(
-        'concurrency' => $concurrency,
-        'method' => 'POST',
-      );
-
-      $common_options = drush_redispatch_get_options();
-      // Merge in stdin options since we process makefiles recursively. See http://drupal.org/node/1510180.
-      $common_options = array_merge($common_options, drush_get_context('stdin'));
-      // Package handler should use 'wget'.
-      $common_options['package-handler'] = 'wget';
-
-      // Avoid any prompts from CLI.
-      $common_options['yes'] = TRUE;
-
-      // Use cache unless explicitly turned off.
-      if (!drush_get_option('no-cache', FALSE)) {
-        $common_options['cache'] = TRUE;
-      }
-      // Unless --verbose or --debug are passed, quiter backend output.
-      if (empty($common_options['verbose']) && empty($common_options['debug'])) {
-        $backend_options['#output-label'] = FALSE;
-        $backend_options['integrate'] = TRUE;
-      }
-      drush_backend_invoke_concurrent($invocations, $common_options, $backend_options, 'make-process', '@none');
-    }
+    _make_invoke_process($projects['contrib']);
   }
   return TRUE;
+}
+
+function _make_invoke_process($projects) {
+  $concurrency = drush_get_option('concurrency', 1);
+  // Generate $concurrency sub-processes to do the actual work.
+  $invocations = array();
+  $thread = 0;
+  foreach ($projects as $project) {
+    $thread = ++$thread % $concurrency;
+    // Ensure that we've set this sub-process up.
+    if (!isset($invocations[$thread])) {
+      $invocations[$thread] = array(
+        'args' => array(
+          make_tmp(),
+        ),
+        'options' => array(
+          'projects' => array(),
+        ),
+        'site' => array(),
+      );
+    }
+    // Add the project to this sub-process.
+    $invocations[$thread]['options']['projects'][] = $project;
+    // Add the manifest so recursive downloads do not override projects.
+    $invocations[$thread]['options']['manifest'] = array_keys($projects);
+  }
+  if (!empty($invocations)) {
+    // Backend options.
+    $backend_options = array(
+      'concurrency' => $concurrency,
+      'method' => 'POST',
+    );
+
+    $common_options = drush_redispatch_get_options();
+    // Merge in stdin options since we process makefiles recursively. See http://drupal.org/node/1510180.
+    $common_options = array_merge($common_options, drush_get_context('stdin'));
+    // Package handler should use 'wget'.
+    $common_options['package-handler'] = 'wget';
+
+    // Avoid any prompts from CLI.
+    $common_options['yes'] = TRUE;
+
+    // Use cache unless explicitly turned off.
+    if (!drush_get_option('no-cache', FALSE)) {
+      $common_options['cache'] = TRUE;
+    }
+    // Unless --verbose or --debug are passed, quiter backend output.
+    if (empty($common_options['verbose']) && empty($common_options['debug'])) {
+      $backend_options['#output-label'] = FALSE;
+      $backend_options['integrate'] = TRUE;
+    }
+    drush_backend_invoke_concurrent($invocations, $common_options, $backend_options, 'make-process', '@none');
+  }
 }
 
 /**
@@ -479,11 +483,12 @@ function make_libraries($contrib_destination, $info, $build_path, $make_dir) {
     return;
   }
   $ignore_checksums = drush_get_option('ignore-checksums');
-  foreach ($info['libraries'] as $key => $library) {
+  foreach ($info['libraries'] as $key => &$library) {
     if (!is_string($key) || !is_array($library)) {
       // TODO Print a prettier message.
       continue;
     }
+    $library['type'] = 'library';
     // Merge the known data onto the library info.
     $library += array(
       'name'                => $key,
@@ -497,9 +502,9 @@ function make_libraries($contrib_destination, $info, $build_path, $make_dir) {
     if ($ignore_checksums) {
       unset($library['download']['md5']);
     }
-    $class = DrushMakeProject::getInstance('library', $library);
-    $class->make();
   }
+
+  _make_invoke_process($info['libraries']);
 }
 
 /**
