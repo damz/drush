@@ -630,7 +630,11 @@ function drush_build_drush_command($drush_path = NULL, $php = NULL, $os = NULL, 
  * Windows variant FIRST if you care.
  */
 function drush_is_windows($os = NULL) {
-  return _drush_test_os($os, array("WIN","CYGWIN","CWRSYNC","MINGW"));
+  static $is_windows;
+  if (!isset($is_windows)) {
+    $is_windows = _drush_test_os($os, array("WIN","CYGWIN","CWRSYNC","MINGW"));
+  }
+  return $is_windows;
 }
 
 /**
