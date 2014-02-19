@@ -8,6 +8,42 @@
  * @requires PHP CLI 5.3.0, or newer.
  */
 
+
+if (getenv('XHPROF')) {
+  if (!getenv('XHPROF_RUN')) {
+    $xhprof_master = TRUE;
+    putenv('XHPROF_RUN=' . time());
+  }
+  else {
+    $xhprof_master = FALSE;
+  }
+
+  error_reporting(-1);
+  xhprof_enable(XHPROF_FLAGS_CPU + XHPROF_FLAGS_MEMORY, array(
+    'ignored_functions' =>  array(
+      'call_user_func',
+      'call_user_func_array',
+      'drush_call_user_func_array',
+    )
+  ));
+
+  register_shutdown_function(function() use ($xhprof_master) {
+    include_once '/var/local/xhprof/xhprof_lib/utils/xhprof_lib.php';
+    include_once '/var/local/xhprof/xhprof_lib/utils/xhprof_runs.php';
+
+    $data = xhprof_disable();
+    $storage = new XHProfRuns_Default();
+    $storage->save_run($data, 'drush', getenv('XHPROF_RUN') . getmypid());
+    if ($xhprof_master) {
+      $runs = glob("/tmp/xhprof/" . getenv('XHPROF_RUN') . "*");
+      $runs = array_map(function($v) {
+        return strtok(basename($v), ".");
+      }, $runs);
+      print "Traced runs: " . implode(",", $runs);
+    }
+  });
+}
+
 require(dirname(__FILE__) . '/includes/bootstrap.inc');
 
 if (drush_bootstrap_prepare() === FALSE) {
